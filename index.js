@@ -55,42 +55,44 @@ client.on('interactionCreate', async interaction => {
   }
 
   // GENERATE
-  if (interaction.commandName === 'gen') {
+if (interaction.commandName === 'gen') {
 
-    if (cooldown.has(interaction.user.id)) {
-      return interaction.reply({ content: "⏳ Wait 10 seconds!", ephemeral: true });
-    }
+  const allowedChannel = '1471186041216962582';
 
-    cooldown.add(interaction.user.id);
-    setTimeout(() => cooldown.delete(interaction.user.id), 10000);
+  if (interaction.channel.id !== allowedChannel) {
+    return interaction.reply({
+      content: "❌ You can only use this command in the gen channel!",
+      ephemeral: true
+    });
+  }
 
-    let stock = fs.readFileSync('./stock.txt', 'utf-8').split('\n').filter(x => x);
+  await interaction.deferReply({ ephemeral: true });
+
+  try {
+    const stock = fs.readFileSync('./stock.txt', 'utf8')
+      .split('\n')
+      .filter(x => x.trim() !== '');
 
     if (stock.length === 0) {
-      return interaction.reply("❌ Out of stock!");
+      return interaction.editReply("❌ No stock available.");
     }
 
-    const account = stock[0]; // Take first item
-    stock.shift(); // Remove it
+    const account = stock.shift();
 
     fs.writeFileSync('./stock.txt', stock.join('\n'));
 
-    const embed = new EmbedBuilder()
-      .setTitle("🎁 Account Generated")
-      .setDescription(`\`${account}\``)
-      .setColor(0x00ff00)
-      .setFooter({ text: `Stock left: ${stock.length}` });
+    await interaction.user.send(`🎁 Here is your account:\n\`${account}\``);
 
-    await interaction.reply({ content: "✅ Check your DM!", ephemeral: true });
-    await interaction.user.send({ embeds: [embed] });
+    await interaction.editReply("✅ Check your DM!");
+
+  } catch (error) {
+    console.error(error);
+    await interaction.editReply("❌ Something went wrong.");
   }
-});
-
-client.once('ready', () => {
-  console.log(`Logged in as ${client.user.tag}`);
-});
+}
 
 client.login(process.env.TOKEN);
+
 
 
 

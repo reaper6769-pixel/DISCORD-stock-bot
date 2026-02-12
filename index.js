@@ -27,11 +27,16 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 // Register commands
 (async () => {
   try {
-    await rest.put(
-      Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
-      { body: commands }
-    );
-    console.log("Commands registered.");
+await rest.put(
+  Routes.applicationGuildCommands(
+    "1471159669136298014", 
+    "1471072212621725698"  
+  ), 
+  { body: commands }
+);
+
+console.log("Commands registered.");
+
   } catch (err) {
     console.error(err);
   }
@@ -86,6 +91,7 @@ client.once('ready', () => {
 });
 
 client.login(process.env.TOKEN);
+
 
 
 

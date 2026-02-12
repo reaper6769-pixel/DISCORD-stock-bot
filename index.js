@@ -22,7 +22,7 @@ const commands = [
     .toJSON()
 ];
 
-const rest = new REST({ version: '10' }).setToken(TOKEN);
+const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
 // Register commands
 (async () => {
@@ -86,6 +86,7 @@ client.once('ready', () => {
 });
 
 client.login(process.env.TOKEN);
+
 
 
 

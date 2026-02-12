@@ -1,9 +1,7 @@
-const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, EmbedBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes } = require('discord.js');
 const fs = require('fs');
 
 console.log("Token is:", process.env.TOKEN);
-const CLIENT_ID = 'YOUR_CLIENT_ID';
-const GUILD_ID = 'YOUR_SERVER_ID';
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds]
@@ -27,16 +25,15 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 // Register commands
 (async () => {
   try {
-await rest.put(
-  Routes.applicationGuildCommands(
-    "1471159669136298014", 
-    "1471072212621725698"  
-  ), 
-  { body: commands }
-);
+    await rest.put(
+      Routes.applicationGuildCommands(
+        "1471159669136298014", 
+        "1471072212621725698"  
+      ), 
+      { body: commands }
+    );
 
-console.log("Commands registered.");
-
+    console.log("Commands registered.");
   } catch (err) {
     console.error(err);
   }
@@ -55,47 +52,40 @@ client.on('interactionCreate', async interaction => {
   }
 
   // GENERATE
-if (interaction.commandName === 'gen') {
+  if (interaction.commandName === 'gen') {
 
-  const allowedChannel = '1471186041216962582';
+    const allowedChannel = '1471186041216962582';
 
-  if (interaction.channel.id !== allowedChannel) {
-    return interaction.reply({
-      content: "❌ You can only use this command in the gen channel!",
-      ephemeral: true
-    });
-  }
-
-  await interaction.deferReply({ ephemeral: true });
-
-  try {
-    const stock = fs.readFileSync('./stock.txt', 'utf8')
-      .split('\n')
-      .filter(x => x.trim() !== '');
-
-    if (stock.length === 0) {
-      return interaction.editReply("❌ No stock available.");
+    if (interaction.channel.id !== allowedChannel) {
+      return interaction.reply({
+        content: "❌ You can only use this command in the gen channel!",
+        ephemeral: true
+      });
     }
 
-    const account = stock.shift();
+    await interaction.deferReply({ ephemeral: true });
 
-    fs.writeFileSync('./stock.txt', stock.join('\n'));
+    try {
+      const stock = fs.readFileSync('./stock.txt', 'utf8')
+        .split('\n')
+        .filter(x => x.trim() !== '');
 
-    await interaction.user.send(`🎁 Here is your account:\n\`${account}\``);
+      if (stock.length === 0) {
+        return interaction.editReply("❌ No stock available.");
+      }
 
-    await interaction.editReply("✅ Check your DM!");
+      const account = stock.shift();
+      fs.writeFileSync('./stock.txt', stock.join('\n'));
 
-  } catch (error) {
-    console.error(error);
-    await interaction.editReply("❌ Something went wrong.");
+      await interaction.user.send(`🎁 Here is your account:\n\`${account}\``);
+      await interaction.editReply("✅ Check your DM!");
+
+    } catch (error) {
+      console.error(error);
+      await interaction.editReply("❌ Something went wrong.");
+    }
   }
-}
+}); // <-- THIS CLOSES client.on
 
+// LOGIN BOT
 client.login(process.env.TOKEN);
-
-
-
-
-
-
-

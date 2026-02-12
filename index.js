@@ -1,7 +1,7 @@
 const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, EmbedBuilder } = require('discord.js');
 const fs = require('fs');
 
-const TOKEN = 'YOUR_BOT_TOKEN';
+console.log("Token is:", process.env.TOKEN);
 const CLIENT_ID = 'YOUR_CLIENT_ID';
 const GUILD_ID = 'YOUR_SERVER_ID';
 
@@ -86,4 +86,5 @@ client.once('ready', () => {
 });
 
 client.login(TOKEN);
+
 

@@ -1,13 +1,33 @@
+// ===== EXPRESS SERVER (FOR RENDER PORT) =====
+const express = require('express');
+const app = express();
+
+app.get('/', (req, res) => {
+  res.send('Bot is online ✅');
+});
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+
+// ===== DISCORD BOT CODE BELOW =====
 const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes } = require('discord.js');
 const fs = require('fs');
 
-console.log("Token is:", process.env.TOKEN);
+// ===== CONFIG =====
+const TOKEN = process.env.TOKEN;
+const CLIENT_ID = '1471159669136298014';       // Your Application ID
+const GUILD_ID = '1471072212621725698';        // Your Server ID
+const ALLOWED_CHANNEL = '1471186041216962582'; // Channel where /gen is allowed
 
+// ===== CREATE CLIENT =====
 const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
 
-// Slash command
+// ===== SLASH COMMANDS =====
 const commands = [
   new SlashCommandBuilder()
     .setName('gen')
@@ -20,53 +40,68 @@ const commands = [
     .toJSON()
 ];
 
-const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
+// ===== REGISTER COMMANDS =====
+const rest = new REST({ version: '10' }).setToken(TOKEN);
 
-// Register commands
 (async () => {
   try {
     await rest.put(
-      Routes.applicationGuildCommands(
-        "1471159669136298014", 
-        "1471072212621725698"  
-      ), 
+      Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
       { body: commands }
     );
-
     console.log("Commands registered.");
   } catch (err) {
     console.error(err);
   }
 })();
 
-// Cooldown
+// ===== COOLDOWN SYSTEM =====
 const cooldown = new Set();
 
+// ===== COMMAND HANDLER =====
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
-  // STOCK CHECK
+  // ===== STOCK COMMAND =====
   if (interaction.commandName === 'stock') {
-    const stock = fs.readFileSync('./stock.txt', 'utf-8').split('\n').filter(x => x);
-    return interaction.reply(`📦 Stock remaining: **${stock.length}**`);
+    try {
+      const stock = fs.readFileSync('./stock.txt', 'utf8')
+        .split('\n')
+        .filter(x => x.trim() !== '');
+
+      return interaction.reply(`📦 Stock remaining: **${stock.length}**`);
+    } catch (err) {
+      console.error(err);
+      return interaction.reply("❌ Could not read stock file.");
+    }
   }
 
-  // GENERATE
+  // ===== GEN COMMAND =====
   if (interaction.commandName === 'gen') {
 
-    const allowedChannel = '1471186041216962582';
-
-    if (interaction.channel.id !== allowedChannel) {
+    // Channel restriction
+    if (interaction.channel.id !== ALLOWED_CHANNEL) {
       return interaction.reply({
         content: "❌ You can only use this command in the gen channel!",
         ephemeral: true
       });
     }
 
+    // Cooldown check
+    if (cooldown.has(interaction.user.id)) {
+      return interaction.reply({
+        content: "⏳ Please wait 2 minutes before using this command again.",
+        ephemeral: true
+      });
+    }
+
+    cooldown.add(interaction.user.id);
+    setTimeout(() => cooldown.delete(interaction.user.id), 120000); // 2 mins
+
     await interaction.deferReply({ ephemeral: true });
 
     try {
-      const stock = fs.readFileSync('./stock.txt', 'utf8')
+      let stock = fs.readFileSync('./stock.txt', 'utf8')
         .split('\n')
         .filter(x => x.trim() !== '');
 
@@ -78,6 +113,7 @@ client.on('interactionCreate', async interaction => {
       fs.writeFileSync('./stock.txt', stock.join('\n'));
 
       await interaction.user.send(`🎁 Here is your account:\n\`${account}\``);
+
       await interaction.editReply("✅ Check your DM!");
 
     } catch (error) {
@@ -85,7 +121,7 @@ client.on('interactionCreate', async interaction => {
       await interaction.editReply("❌ Something went wrong.");
     }
   }
-}); // <-- THIS CLOSES client.on
+});
 
-// LOGIN BOT
-client.login(process.env.TOKEN);
+// ===== LOGIN =====
+client.login(TOKEN);

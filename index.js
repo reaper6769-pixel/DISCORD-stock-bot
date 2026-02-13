@@ -38,7 +38,7 @@ const commands = [
     .setDescription('Add stock (Admin only)')
     .addStringOption(option =>
       option.setName('item')
-        .setDescription('Stock to add (email:pass)')
+       .setDescription('Paste multiple stock lines (one per line)')
         .setRequired(true)
     ),
 
@@ -121,4 +121,5 @@ client.on('interactionCreate', async interaction => {
 
 // ===== LOGIN =====
 client.login(TOKEN);
+
 

@@ -1,0 +1,88 @@
+const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, EmbedBuilder } = require('discord.js');
+const fs = require('fs');
+
+const TOKEN = process.env.TOKEN;
+const CLIENT_ID = 'YOUR_CLIENT_ID';
+const GUILD_ID = 'YOUR_SERVER_ID';
+
+const client = new Client({
+  intents: [GatewayIntentBits.Guilds]
+});
+
+// Slash command
+const commands = [
+  new SlashCommandBuilder()
+    .setName('gen')
+    .setDescription('Generate an account from stock')
+    .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName('stock')
+    .setDescription('Check remaining stock')
+    .toJSON()
+];
+
+const rest = new REST({ version: '10' }).setToken(TOKEN);
+
+// Register commands
+(async () => {
+  try {
+    await rest.put(
+      Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
+      { body: commands }
+    );
+    console.log("Commands registered.");
+  } catch (err) {
+    console.error(err);
+  }
+})();
+
+// Cooldown
+const cooldown = new Set();
+
+client.on('interactionCreate', async interaction => {
+  if (!interaction.isChatInputCommand()) return;
+
+  // STOCK CHECK
+  if (interaction.commandName === 'stock') {
+    const stock = fs.readFileSync('./stock.txt', 'utf-8').split('\n').filter(x => x);
+    return interaction.reply(`📦 Stock remaining: **${stock.length}**`);
+  }
+
+  // GENERATE
+  if (interaction.commandName === 'gen') {
+
+    if (cooldown.has(interaction.user.id)) {
+      return interaction.reply({ content: "⏳ Wait 10 seconds!", ephemeral: true });
+    }
+
+    cooldown.add(interaction.user.id);
+    setTimeout(() => cooldown.delete(interaction.user.id), 10000);
+
+    let stock = fs.readFileSync('./stock.txt', 'utf-8').split('\n').filter(x => x);
+
+    if (stock.length === 0) {
+      return interaction.reply("❌ Out of stock!");
+    }
+
+    const account = stock[0]; // Take first item
+    stock.shift(); // Remove it
+
+    fs.writeFileSync('./stock.txt', stock.join('\n'));
+
+    const embed = new EmbedBuilder()
+      .setTitle("🎁 Account Generated")
+      .setDescription(`\`${account}\``)
+      .setColor(0x00ff00)
+      .setFooter({ text: `Stock left: ${stock.length}` });
+
+    await interaction.reply({ content: "✅ Check your DM!", ephemeral: true });
+    await interaction.user.send({ embeds: [embed] });
+  }
+});
+
+client.once('ready', () => {
+  console.log(`Logged in as ${client.user.tag}`);
+});
+
+client.login(TOKEN);

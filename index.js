@@ -65,21 +65,25 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
   }
 })();
 
-// ===== INTERACTION HANDLER =====
-client.on('interactionCreate', async interaction => {
-  if (!interaction.isChatInputCommand()) return;
-
-  // ===== CHECK STOCK =====
-  if (interaction.commandName === 'stock') {
-    if (!fs.existsSync('./stock.txt')) {
-      return interaction.reply('❌ stock.txt file not found.');
-    }
-
-    const data = fs.readFileSync('./stock.txt', 'utf8');
-    const lines = data.split('\n').filter(line => line.trim() !== '');
-
-    await interaction.reply(`📦 Stock available: ${lines.length}`);
+// ===== GENERATE STOCK =====
+if (interaction.commandName === 'gen') {
+  if (!fs.existsSync('./stock.txt')) {
+    return interaction.reply('❌ No stock file found.');
   }
+
+  let data = fs.readFileSync('./stock.txt', 'utf8');
+  let lines = data.split('\n').filter(line => line.trim() !== '');
+
+  if (lines.length === 0) {
+    return interaction.reply('❌ No stock available.');
+  }
+
+  const generated = lines.shift();
+
+  fs.writeFileSync('./stock.txt', lines.join('\n'));
+
+  await interaction.reply(`🎁 Generated:\n\`${generated}\``);
+}
 
   // ===== ADD STOCK =====
   if (interaction.commandName === 'addstock') {
@@ -121,5 +125,6 @@ client.on('interactionCreate', async interaction => {
 
 // ===== LOGIN =====
 client.login(TOKEN);
+
 
 

@@ -17,9 +17,9 @@ const fs = require('fs');
 
 // ====== PUT YOUR DETAILS HERE ======
 const TOKEN = process.env.TOKEN; // Put token in Render Environment Variables
-const CLIENT_ID = 'YOUR_CLIENT_ID_HERE';
-const GUILD_ID = 'YOUR_GUILD_ID_HERE';
-const ADMIN_ID = 'YOUR_DISCORD_ID_HERE'; // Your personal Discord ID
+const CLIENT_ID = '1471159669136298014';
+const GUILD_ID = '1471072212621725698';
+const ADMIN_ID = 'gamer11yt___65957'; // Your personal Discord ID
 // ====================================
 
 // Create client
@@ -121,3 +121,4 @@ client.on('interactionCreate', async interaction => {
 
 // ===== LOGIN =====
 client.login(TOKEN);
+

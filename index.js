@@ -21,6 +21,7 @@ const CLIENT_ID = '1471159669136298014';
 const GUILD_ID = '1471072212621725698';
 const ADMIN_ID = '1359526601905279037';
 const ALLOWED_CHANNEL_ID = '1471186041216962582';
+const REQUIRED_ROLE_ID = '1471871189746978906';
 // ======================
 
 const client = new Client({
@@ -80,32 +81,49 @@ client.on('interactionCreate', async interaction => {
   }
 
   // ===== GENERATE STOCK =====
-  if (interaction.commandName === 'gen') {
+ // ===== GENERATE STOCK =====
+if (interaction.commandName === 'gen') {
 
-    if (!fs.existsSync('./stock.txt')) {
-      return interaction.reply({ content: '❌ No stock file found.', ephemeral: true });
-    }
-
-    let data = fs.readFileSync('./stock.txt', 'utf8');
-    let lines = data.split('\n').filter(line => line.trim() !== '');
-
-    if (lines.length === 0) {
-      return interaction.reply({ content: '❌ No stock available.', ephemeral: true });
-    }
-
-    const generated = lines.shift();
-    fs.writeFileSync('./stock.txt', lines.join('\n'));
-
-    try {
-      await interaction.user.send(`🎁 Your generated account:\n\`${generated}\``);
-      return interaction.reply({ content: "✅ Check your DMs!", ephemeral: true });
-    } catch {
-      return interaction.reply({
-        content: "❌ I can't DM you. Please enable DMs.",
-        ephemeral: true
-      });
-    }
+  // Check allowed channel
+  if (interaction.channelId !== ALLOWED_CHANNEL_ID) {
+    return interaction.reply({
+      content: "❌ This command can only be used in the allowed channel.",
+      ephemeral: true
+    });
   }
+
+  // Check required role
+  if (!interaction.member.roles.cache.has(REQUIRED_ROLE_ID)) {
+    return interaction.reply({
+      content: "❌ You don't have permission to use this command.",
+      ephemeral: true
+    });
+  }
+
+  if (!fs.existsSync('./stock.txt')) {
+    return interaction.reply({ content: '❌ No stock file found.', ephemeral: true });
+  }
+
+  let data = fs.readFileSync('./stock.txt', 'utf8');
+  let lines = data.split('\n').filter(line => line.trim() !== '');
+
+  if (lines.length === 0) {
+    return interaction.reply({ content: '❌ No stock available.', ephemeral: true });
+  }
+
+  const generated = lines.shift();
+  fs.writeFileSync('./stock.txt', lines.join('\n'));
+
+  try {
+    await interaction.user.send(`🎁 Your generated account:\n\`${generated}\``);
+    return interaction.reply({ content: "✅ Check your DMs!", ephemeral: true });
+  } catch {
+    return interaction.reply({
+      content: "❌ I can't DM you. Enable DMs.",
+      ephemeral: true
+    });
+  }
+}
 
   // ===== CHECK STOCK =====
   if (interaction.commandName === 'stock') {
@@ -171,3 +189,4 @@ client.on('interactionCreate', async interaction => {
 
 // ===== LOGIN =====
 client.login(TOKEN);
+

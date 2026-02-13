@@ -7,22 +7,22 @@ app.get('/', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 
-// ===== DISCORD BOT CODE BELOW =====
+// ===== DISCORD BOT CODE =====
 const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes } = require('discord.js');
 const fs = require('fs');
 
-// ===== CONFIG =====
-const TOKEN = process.env.TOKEN;
-const CLIENT_ID = '1471159669136298014';       // Your Application ID
-const GUILD_ID = '1471072212621725698';        // Your Server ID
-const ALLOWED_CHANNEL = '1471186041216962582'; // Channel where /gen is allowed
+// ====== PUT YOUR DETAILS HERE ======
+const TOKEN = process.env.TOKEN; // Put token in Render Environment Variables
+const CLIENT_ID = 'YOUR_CLIENT_ID_HERE';
+const GUILD_ID = 'YOUR_GUILD_ID_HERE';
+const ADMIN_ID = 'YOUR_DISCORD_ID_HERE'; // Your personal Discord ID
+// ====================================
 
-// ===== CREATE CLIENT =====
+// Create client
 const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
@@ -30,96 +30,92 @@ const client = new Client({
 // ===== SLASH COMMANDS =====
 const commands = [
   new SlashCommandBuilder()
-    .setName('gen')
-    .setDescription('Generate an account from stock')
-    .toJSON(),
+    .setName('stock')
+    .setDescription('Check available stock'),
 
   new SlashCommandBuilder()
-    .setName('stock')
-    .setDescription('Check remaining stock')
-    .toJSON()
-];
+    .setName('addstock')
+    .setDescription('Add stock (Admin only)')
+    .addStringOption(option =>
+      option.setName('item')
+        .setDescription('Stock to add (email:pass)')
+        .setRequired(true)
+    ),
+
+  new SlashCommandBuilder()
+    .setName('removestock')
+    .setDescription('Remove one stock (Admin only)')
+].map(command => command.toJSON());
 
 // ===== REGISTER COMMANDS =====
 const rest = new REST({ version: '10' }).setToken(TOKEN);
 
 (async () => {
   try {
+    console.log('Registering slash commands...');
+
     await rest.put(
       Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
       { body: commands }
     );
-    console.log("Commands registered.");
-  } catch (err) {
-    console.error(err);
+
+    console.log('Commands registered successfully.');
+  } catch (error) {
+    console.error(error);
   }
 })();
 
-// ===== COOLDOWN SYSTEM =====
-const cooldown = new Set();
-
-// ===== COMMAND HANDLER =====
+// ===== INTERACTION HANDLER =====
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
-  // ===== STOCK COMMAND =====
+  // ===== CHECK STOCK =====
   if (interaction.commandName === 'stock') {
-    try {
-      const stock = fs.readFileSync('./stock.txt', 'utf8')
-        .split('\n')
-        .filter(x => x.trim() !== '');
-
-      return interaction.reply(`📦 Stock remaining: **${stock.length}**`);
-    } catch (err) {
-      console.error(err);
-      return interaction.reply("❌ Could not read stock file.");
+    if (!fs.existsSync('./stock.txt')) {
+      return interaction.reply('❌ stock.txt file not found.');
     }
+
+    const data = fs.readFileSync('./stock.txt', 'utf8');
+    const lines = data.split('\n').filter(line => line.trim() !== '');
+
+    await interaction.reply(`📦 Stock available: ${lines.length}`);
   }
 
-  // ===== GEN COMMAND =====
-  if (interaction.commandName === 'gen') {
-
-    // Channel restriction
-    if (interaction.channel.id !== ALLOWED_CHANNEL) {
-      return interaction.reply({
-        content: "❌ You can only use this command in the gen channel!",
-        ephemeral: true
-      });
+  // ===== ADD STOCK =====
+  if (interaction.commandName === 'addstock') {
+    if (interaction.user.id !== ADMIN_ID) {
+      return interaction.reply({ content: '❌ You are not admin!', ephemeral: true });
     }
 
-    // Cooldown check
-    if (cooldown.has(interaction.user.id)) {
-      return interaction.reply({
-        content: "⏳ Please wait 2 minutes before using this command again.",
-        ephemeral: true
-      });
+    const item = interaction.options.getString('item');
+
+    fs.appendFileSync('./stock.txt', item + '\n');
+
+    await interaction.reply('✅ Stock added successfully!');
+  }
+
+  // ===== REMOVE STOCK =====
+  if (interaction.commandName === 'removestock') {
+    if (interaction.user.id !== ADMIN_ID) {
+      return interaction.reply({ content: '❌ You are not admin!', ephemeral: true });
     }
 
-    cooldown.add(interaction.user.id);
-    setTimeout(() => cooldown.delete(interaction.user.id), 120000); // 2 mins
-
-    await interaction.deferReply({ ephemeral: true });
-
-    try {
-      let stock = fs.readFileSync('./stock.txt', 'utf8')
-        .split('\n')
-        .filter(x => x.trim() !== '');
-
-      if (stock.length === 0) {
-        return interaction.editReply("❌ No stock available.");
-      }
-
-      const account = stock.shift();
-      fs.writeFileSync('./stock.txt', stock.join('\n'));
-
-      await interaction.user.send(`🎁 Here is your account:\n\`${account}\``);
-
-      await interaction.editReply("✅ Check your DM!");
-
-    } catch (error) {
-      console.error(error);
-      await interaction.editReply("❌ Something went wrong.");
+    if (!fs.existsSync('./stock.txt')) {
+      return interaction.reply('❌ No stock file found.');
     }
+
+    let data = fs.readFileSync('./stock.txt', 'utf8');
+    let lines = data.split('\n').filter(line => line.trim() !== '');
+
+    if (lines.length === 0) {
+      return interaction.reply('❌ No stock available.');
+    }
+
+    const removed = lines.shift();
+
+    fs.writeFileSync('./stock.txt', lines.join('\n'));
+
+    await interaction.reply(`🗑 Removed: ${removed}`);
   }
 });
 
